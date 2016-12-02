@@ -13,7 +13,7 @@
             [clojure.walk :as walk]
             #?(:clj [riddley.walk :as riddley]))
 
-  #?(:clj (:import [com.rpl.specter Util MutableCell])))
+  #?(:clj (:import [com.rpl.specter Util MutableCell CachedPathInfo])))
 
 
 (def NONE ::NONE)
@@ -424,8 +424,9 @@
 
 
 
-(defrecord CachedPathInfo
-  [dynamic? precompiled])
+#?(:cljs
+   (defrecord CachedPathInfo
+       [dynamic? precompiled]))
 
 
 (defn filter-select [afn structure next-fn]
@@ -846,13 +847,13 @@
       (do
         (when *DEBUG-INLINE-CACHING*
           (println "Static result:" magic-path))
-        (->CachedPathInfo false magic-path))
+        (CachedPathInfo. false magic-path))
       (let [maker (mk-dynamic-path-maker
                    (resolve-nav-code (->DynamicPath magic-path) possible-params)
                    ns-str
                    used-locals-list
                    possible-params)]
-        (->CachedPathInfo true maker)))))
+        (CachedPathInfo. true maker)))))
 
 
 

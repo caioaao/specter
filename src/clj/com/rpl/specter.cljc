@@ -252,16 +252,27 @@
 
              precompiled-sym (gensym "precompiled")
 
+             cached-path-info-type (if (= platform :clj)
+                                     'com.rpl.specter.CachedPathInfo
+                                     'com.rpl.specter.impl.CachedPathInfo)
+
              handle-params-code
              (if (= platform :clj)
                `(~precompiled-sym ~@used-locals)
-               `(~precompiled-sym ~possible-params))]
+               `(~precompiled-sym ~possible-params))
+
+             outer-info-sym (gensym "info")
+
+             dynamic?-code
+             (if (= platform :clj)
+               `(.-is_dynamic ~outer-info-sym)
+               `(.-dynamic?  ~outer-info-sym))]
          (if (= platform :clj)
            (i/intern* *ns* cache-sym (i/mutable-cell)))
-         `(let [info# ~get-cache-code
+         `(let [~outer-info-sym ~get-cache-code
 
-                ^com.rpl.specter.impl.CachedPathInfo info#
-                (if (nil? info#)
+                ~(with-meta outer-info-sym {:tag cached-path-info-type})
+                (if (nil? ~outer-info-sym)
                   (let [~info-sym (i/magic-precompilation
                                    ~prepared-path
                                    ~(str *ns*)
@@ -269,10 +280,10 @@
                                    (quote ~possible-params))]
                     ~add-cache-code
                     ~info-sym)
-                  info#)
+                  ~outer-info-sym)
 
-                ~precompiled-sym (.-precompiled info#)
-                dynamic?# (.-dynamic? info#)]
+                ~precompiled-sym (.-precompiled ~outer-info-sym)
+                dynamic?# ~dynamic?-code]
             (if dynamic?#
               ~handle-params-code
               ~precompiled-sym))))
